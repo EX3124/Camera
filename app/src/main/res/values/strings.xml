@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Camera</string>
+    <string name="title">Camera Service</string>
+    <string name="text">Camera is running in the background</string>
+</resources>
