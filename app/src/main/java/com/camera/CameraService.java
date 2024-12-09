@@ -9,6 +9,7 @@ import android.content.Intent;
 import android.media.MediaPlayer;
 import android.os.IBinder;
 import android.provider.MediaStore;
+import android.util.Size;
 
 import androidx.annotation.NonNull;
 import androidx.camera.core.CameraSelector;
@@ -69,8 +70,13 @@ public class CameraService extends Service implements LifecycleOwner {
         cameraProviderFuture.addListener(() -> {
             try {
                 ProcessCameraProvider cameraProvider = cameraProviderFuture.get();
-                Preview preview = new Preview.Builder().build();
-                imageCapture = new ImageCapture.Builder().build();
+                Preview preview = new Preview.Builder()
+                        .setTargetResolution(new Size(MainActivity.instance.selectedResolution[0], MainActivity.instance.selectedResolution[1]))
+                        .build();
+
+                imageCapture = new ImageCapture.Builder()
+                        .setTargetResolution(new Size(MainActivity.instance.selectedResolution[0], MainActivity.instance.selectedResolution[1]))
+                        .build();
                 preview.setSurfaceProvider(MainActivity.instance.previewView.getSurfaceProvider());
 
                 cameraProvider.unbindAll();
@@ -96,9 +102,8 @@ public class CameraService extends Service implements LifecycleOwner {
     public void takePhoto() {
         if (imageCapture == null) return;
 
-        String name = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss_SSS", Locale.getDefault()).format(System.currentTimeMillis());
         ContentValues contentValues = new ContentValues();
-        contentValues.put(MediaStore.MediaColumns.DISPLAY_NAME, name);
+        contentValues.put(MediaStore.MediaColumns.DISPLAY_NAME, new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss_SSS", Locale.getDefault()).format(System.currentTimeMillis()));
         contentValues.put(MediaStore.MediaColumns.MIME_TYPE, "image/png");
         contentValues.put(MediaStore.MediaColumns.RELATIVE_PATH, "DCIM/Camera");
 
