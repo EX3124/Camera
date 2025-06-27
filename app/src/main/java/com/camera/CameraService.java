@@ -6,6 +6,8 @@ import android.app.NotificationManager;
 import android.app.Service;
 import android.content.ContentValues;
 import android.content.Intent;
+import android.media.AudioAttributes;
+import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.IBinder;
 import android.provider.MediaStore;
@@ -17,6 +19,7 @@ import androidx.camera.core.ImageCapture;
 import androidx.camera.core.ImageCaptureException;
 import androidx.camera.core.Preview;
 import androidx.camera.lifecycle.ProcessCameraProvider;
+import androidx.camera.view.PreviewView;
 import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
 import androidx.lifecycle.Lifecycle;
@@ -77,7 +80,8 @@ public class CameraService extends Service implements LifecycleOwner {
                 imageCapture = new ImageCapture.Builder()
                         .setTargetResolution(new Size(MainActivity.instance.selectedResolution[0], MainActivity.instance.selectedResolution[1]))
                         .build();
-                preview.setSurfaceProvider(MainActivity.instance.previewView.getSurfaceProvider());
+                PreviewView view = MainActivity.instance.activity.findViewById(R.id.preview);
+                preview.setSurfaceProvider(view.getSurfaceProvider());
 
                 cameraProvider.unbindAll();
                 cameraProvider.bindToLifecycle(this, CameraSelector.DEFAULT_BACK_CAMERA, preview, imageCapture);
@@ -102,8 +106,10 @@ public class CameraService extends Service implements LifecycleOwner {
     public void takePhoto() {
         if (imageCapture == null) return;
 
+        MainActivity.instance.activity.findViewById(R.id.button).setEnabled(false);
+
         ContentValues contentValues = new ContentValues();
-        contentValues.put(MediaStore.MediaColumns.DISPLAY_NAME, new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss_SSS", Locale.getDefault()).format(System.currentTimeMillis()));
+        contentValues.put(MediaStore.MediaColumns.DISPLAY_NAME, new SimpleDateFormat("yyyy-MM-dd HH-mm-ss SSS", Locale.getDefault()).format(System.currentTimeMillis()));
         contentValues.put(MediaStore.MediaColumns.MIME_TYPE, "image/png");
         contentValues.put(MediaStore.MediaColumns.RELATIVE_PATH, "DCIM/Camera");
 
@@ -113,11 +119,19 @@ public class CameraService extends Service implements LifecycleOwner {
                 contentValues
         ).build();
 
-        MediaPlayer.create(this, R.raw.shutter).start();
+        MainActivity.instance.activity.findViewById(R.id.preview).animate().alpha(0f).setDuration(100).withEndAction(new Runnable() {
+            @Override
+            public void run() {
+                MainActivity.instance.activity.findViewById(R.id.preview).animate().alpha(1f).setDuration(100).start();
+            }
+        }).start();
+
+        AudioManager audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
+        MediaPlayer.create(this, R.raw.shutter, new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION).build(), audioManager.generateAudioSessionId()).start();
         imageCapture.takePicture(outputOptions, ContextCompat.getMainExecutor(this), new ImageCapture.OnImageSavedCallback() {
             @Override
             public void onImageSaved(@NonNull ImageCapture.OutputFileResults outputFileResults) {
-
+                MainActivity.instance.activity.findViewById(R.id.button).setEnabled(true);
             }
 
             @Override

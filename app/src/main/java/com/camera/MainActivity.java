@@ -8,12 +8,19 @@ import android.graphics.Point;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.params.StreamConfigurationMap;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.VibrationAttributes;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
 import android.util.Log;
 import android.util.Size;
 import android.view.Display;
+import android.view.HapticFeedbackConstants;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageButton;
 
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
@@ -28,8 +35,8 @@ import java.util.List;
 public class MainActivity extends AppCompatActivity {
     public static MainActivity instance;
 
-    PreviewView previewView;
-    int[] selectedResolution;
+    AppCompatActivity activity;
+    int[] selectedResolution = new int[2];
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -38,8 +45,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.main);
 
         instance = this;
-        previewView = findViewById(R.id.previewView);
-        selectedResolution = new int[2];
+        activity = this;
 
         ActivityCompat.requestPermissions(this, new String[]{"android.permission.CAMERA"}, 0);
 
@@ -50,11 +56,17 @@ public class MainActivity extends AppCompatActivity {
             startService(new Intent(this, CameraService.class));
         }
 
-        Button button = findViewById(R.id.button);
-        button.setOnClickListener(new View.OnClickListener() {
+        ImageButton button = findViewById(R.id.button);
+        button.setOnTouchListener(new View.OnTouchListener() {
             @Override
-            public void onClick(View v) {
-                CameraService.instance.takePhoto();
+            public boolean onTouch(View v, MotionEvent event) {
+                if (event.getAction() == MotionEvent.ACTION_DOWN)
+                    v.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
+                if (event.getAction() == MotionEvent.ACTION_UP) {
+                    CameraService.instance.takePhoto();
+                    v.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY_RELEASE);
+                }
+                return true;
             }
         });
     }
@@ -64,6 +76,9 @@ public class MainActivity extends AppCompatActivity {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == 0) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                String[] resolution = getBestResolutions(getScreenResolutions(), getCameraResolutions()).split("x");
+                selectedResolution[0] = Integer.parseInt(resolution[1]);
+                selectedResolution[1] = Integer.parseInt(resolution[0]);
                 startService(new Intent(this, CameraService.class));
             }
         }

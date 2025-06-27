@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">相机</string>
+    <string name="title">相机服务</string>
+    <string name="text">相机在后台运行</string>
+</resources>
