@@ -5,27 +5,25 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.ImageFormat;
 import android.graphics.Point;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.params.StreamConfigurationMap;
-import android.os.Build;
 import android.os.Bundle;
-import android.os.VibrationAttributes;
-import android.os.VibrationEffect;
-import android.os.Vibrator;
 import android.util.Log;
 import android.util.Size;
 import android.view.Display;
 import android.view.HapticFeedbackConstants;
 import android.view.MotionEvent;
 import android.view.View;
-import android.widget.Button;
 import android.widget.ImageButton;
 
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.camera.view.PreviewView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
@@ -60,15 +58,31 @@ public class MainActivity extends AppCompatActivity {
         button.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
-                if (event.getAction() == MotionEvent.ACTION_DOWN)
+                if (event.getAction() == MotionEvent.ACTION_DOWN) {
                     v.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
+                    v.setBackground(getDrawable(R.drawable.shoot_press));
+                }
                 if (event.getAction() == MotionEvent.ACTION_UP) {
-                    CameraService.instance.takePhoto();
                     v.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY_RELEASE);
+                    v.setBackground(getDrawable(R.drawable.shoot));
+                    CameraService.instance.takePhoto();
                 }
                 return true;
             }
         });
+
+        SensorManager sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
+        sensorManager.registerListener(new SensorEventListener() {
+            @Override
+            public void onAccuracyChanged(Sensor sensor, int accuracy) {
+
+            }
+
+            @Override
+            public void onSensorChanged(SensorEvent event) {
+                CameraService.instance.imageCapture.setTargetRotation((int) event.values[0]);
+            }
+        }, sensorManager.getDefaultSensor(27), SensorManager.SENSOR_DELAY_NORMAL);
     }
 
     @Override

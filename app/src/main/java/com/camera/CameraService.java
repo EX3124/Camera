@@ -11,6 +11,7 @@ import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.IBinder;
 import android.provider.MediaStore;
+import android.provider.Settings;
 import android.util.Size;
 
 import androidx.annotation.NonNull;
@@ -126,8 +127,13 @@ public class CameraService extends Service implements LifecycleOwner {
             }
         }).start();
 
-        AudioManager audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
-        MediaPlayer.create(this, R.raw.shutter, new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION).build(), audioManager.generateAudioSessionId()).start();
+        try {
+            if (Settings.System.getInt(this.getContentResolver(), "camera_sounds_enabled") == 1) {
+                AudioManager audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
+                MediaPlayer.create(this, R.raw.shutter, new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION).build(), audioManager.generateAudioSessionId()).start();
+            }
+        } catch (Throwable ignored) { }
+
         imageCapture.takePicture(outputOptions, ContextCompat.getMainExecutor(this), new ImageCapture.OnImageSavedCallback() {
             @Override
             public void onImageSaved(@NonNull ImageCapture.OutputFileResults outputFileResults) {
