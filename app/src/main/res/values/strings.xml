@@ -1,5 +1,8 @@
 <resources>
     <string name="app_name">Camera</string>
-    <string name="title">Camera Service</string>
-    <string name="text">Camera is running in the background</string>
+    <string name="notifi_title">Camera Service</string>
+    <string name="notifi_text">Camera is running in the background</string>
+
+    <string name="talkback_capture">Capture</string>
+    <string name="talkback_front">Switch to front camera</string>
 </resources>

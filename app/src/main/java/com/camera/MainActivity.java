@@ -1,20 +1,14 @@
 package com.camera;
 
-import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.graphics.ImageFormat;
 import android.graphics.Point;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
-import android.hardware.camera2.CameraCharacteristics;
-import android.hardware.camera2.CameraManager;
-import android.hardware.camera2.params.StreamConfigurationMap;
 import android.os.Bundle;
 import android.util.Log;
-import android.util.Size;
 import android.view.Display;
 import android.view.HapticFeedbackConstants;
 import android.view.MotionEvent;
@@ -24,17 +18,15 @@ import android.widget.ImageButton;
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.camera.view.PreviewView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
     public static MainActivity instance;
 
     AppCompatActivity activity;
-    int[] selectedResolution = new int[2];
+    boolean allowcapture = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,31 +39,69 @@ public class MainActivity extends AppCompatActivity {
 
         ActivityCompat.requestPermissions(this, new String[]{"android.permission.CAMERA"}, 0);
 
-        if (ContextCompat.checkSelfPermission(this, "android.permission.CAMERA") == PackageManager.PERMISSION_GRANTED) {
-            String[] resolution = getBestResolutions(getScreenResolutions(), getCameraResolutions()).split("x");
-            selectedResolution[0] = Integer.parseInt(resolution[1]);
-            selectedResolution[1] = Integer.parseInt(resolution[0]);
+        if (ContextCompat.checkSelfPermission(this, "android.permission.CAMERA") == PackageManager.PERMISSION_GRANTED)
             startService(new Intent(this, CameraService.class));
-        }
 
-        ImageButton button = findViewById(R.id.button);
-        button.setOnTouchListener(new View.OnTouchListener() {
+        ImageButton capture = findViewById(R.id.capture);
+        capture.setEnabled(false);
+        capture.setAlpha(0f);
+        capture.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
                 if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                    allowcapture = true;
+                    v.setBackground(getDrawable(R.drawable.capture_press));
                     v.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
-                    v.setBackground(getDrawable(R.drawable.shoot_press));
+                } else if (event.getAction() == MotionEvent.ACTION_UP && allowcapture) {
+                    allowcapture = false;
+                    v.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK);
+                    v.setBackground(getDrawable(R.drawable.capture));
                 }
-                if (event.getAction() == MotionEvent.ACTION_UP) {
-                    v.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY_RELEASE);
-                    v.setBackground(getDrawable(R.drawable.shoot));
-                    CameraService.instance.takePhoto();
-                }
-                return true;
+                return false;
+            }
+        });
+        capture.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                v.setEnabled(false);
+                CameraService.instance.capture();
             }
         });
 
-        SensorManager sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
+        ImageButton front = findViewById(R.id.front);
+        front.setEnabled(false);
+        front.setAlpha(0f);
+        front.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                v.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK);
+                front.setEnabled(false);
+                CameraService.instance.switchLens();
+            }
+        });
+
+        PreviewView preview = findViewById(R.id.preview);
+        preview.setAlpha(0f);
+        preview.animate().setDuration(1000).withEndAction(new Runnable() {
+            @Override
+            public void run() {
+                preview.animate().alpha(1f).setDuration(250).start();
+                capture.animate().alpha(1f).setDuration(250).withEndAction(new Runnable() {
+                    @Override
+                    public void run() {
+                        capture.setEnabled(true);
+                    }
+                }).start();
+                front.animate().alpha(1f).setDuration(250).withEndAction(new Runnable() {
+                    @Override
+                    public void run() {
+                        front.setEnabled(true);
+                    }
+                }).start();
+            }
+        }).start();
+
+        SensorManager sensorManager = getSystemService(SensorManager.class);
         sensorManager.registerListener(new SensorEventListener() {
             @Override
             public void onAccuracyChanged(Sensor sensor, int accuracy) {
@@ -88,36 +118,11 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == 0) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                String[] resolution = getBestResolutions(getScreenResolutions(), getCameraResolutions()).split("x");
-                selectedResolution[0] = Integer.parseInt(resolution[1]);
-                selectedResolution[1] = Integer.parseInt(resolution[0]);
-                startService(new Intent(this, CameraService.class));
-            }
-        }
+        if (requestCode == 0 && grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED)
+            startService(new Intent(this, CameraService.class));
     }
 
-    private List<String> getCameraResolutions() {
-        List<String> resolutions = new ArrayList<>();
-        CameraManager cameraManager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
-        try {
-            for (String cameraId : cameraManager.getCameraIdList()) {
-                CameraCharacteristics characteristics = cameraManager.getCameraCharacteristics(cameraId);
-                StreamConfigurationMap map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
-                if (map != null) {
-                    Size[] sizes = map.getOutputSizes(ImageFormat.JPEG);
-                    for (Size size : sizes) {
-                        Log.e("com.camera", "Camera ID: " + cameraId + " - Supported resolution: " + size.toString());
-                        resolutions.add(size.toString());
-                    }
-                }
-            }
-        } catch (Throwable ignored) {
-        }
-        return resolutions;
-    }
-    private int[] getScreenResolutions() {
+    public int[] getScreenResolutions() {
         Display display = getWindowManager().getDefaultDisplay();
         Point size = new Point();
         int[] screenConfig = new int[4];
@@ -138,42 +143,7 @@ public class MainActivity extends AppCompatActivity {
 
         return screenConfig;
     }
-    private String getBestResolutions(int[] screenConfig, List<String> resolutions){
-        String maxResolution = "";
-        int maxValue = 0;
-        String bestMatch;
-
-        for (String res : resolutions) {
-            String[] dimensions = res.split("x");
-            int width = Integer.parseInt(dimensions[0]);
-            int height = Integer.parseInt(dimensions[1]);
-            int value = width * height;
-
-            if (value > maxValue) {
-                maxValue = value;
-                maxResolution = res;
-            }
-        }
-        bestMatch = maxResolution;
-
-        for (String resolution : resolutions) {
-            String[] parts = resolution.split("x");
-            int width = Integer.parseInt(parts[0]);
-            int height = Integer.parseInt(parts[1]);
-
-            int gcd = gcd(width, height);
-            int aspectRatioWidth = width / gcd;
-            int aspectRatioHeight = height / gcd;
-
-            if (aspectRatioWidth == screenConfig[2] && aspectRatioHeight == screenConfig[3]) {
-                bestMatch = resolution;
-                break;
-            }
-        }
-        Log.e("com.camera", "BestResolution is " + bestMatch);
-        return bestMatch;
-    }
-    private int gcd(int a, int b) {
+    public int gcd(int a, int b) {
         while (b != 0) {
             int temp = b;
             b = a % b;
