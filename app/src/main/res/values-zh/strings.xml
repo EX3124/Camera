@@ -6,4 +6,5 @@
 
     <string name="talkback_capture">拍照</string>
     <string name="talkback_front">切换前置摄像头</string>
+    <string name="talkback_gallery">前往图库</string>
 </resources>

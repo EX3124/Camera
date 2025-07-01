@@ -23,7 +23,7 @@
         android:id="@+id/capture"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="128dp"
+        android:layout_marginBottom="118dp"
         android:background="@drawable/capture"
         android:contentDescription="@string/talkback_capture"
         app:layout_constraintBottom_toBottomOf="parent"
@@ -34,12 +34,36 @@
         android:id="@+id/front"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="138dp"
+        android:layout_marginBottom="128dp"
         android:src="@drawable/front"
         android:background="@drawable/selector_circle"
         android:contentDescription="@string/talkback_front"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toStartOf="@+id/capture"
         app:layout_constraintStart_toStartOf="parent" />
+
+    <FrameLayout
+        android:id="@+id/gallery"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_marginBottom="128dp"
+        android:background="@drawable/selector_circle"
+        android:contentDescription="@string/talkback_gallery"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/capture"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <ImageView
+            android:layout_width="45dp"
+            android:layout_height="45dp"
+            android:layout_gravity="center"
+            android:src="@drawable/pressed_circle" />
+
+        <ImageView
+            android:id="@+id/thumbnail"
+            android:layout_width="43dp"
+            android:layout_height="43dp"
+            android:layout_gravity="center" />
+    </FrameLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

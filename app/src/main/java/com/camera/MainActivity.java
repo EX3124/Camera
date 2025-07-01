@@ -1,19 +1,26 @@
 package com.camera;
 
+import android.content.ContentUris;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
 import android.graphics.Point;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
+import android.provider.MediaStore;
 import android.util.Log;
 import android.view.Display;
 import android.view.HapticFeedbackConstants;
 import android.view.MotionEvent;
 import android.view.View;
+import android.widget.FrameLayout;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
@@ -21,12 +28,23 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.camera.view.PreviewView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.content.FileProvider;
+
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.resource.bitmap.CircleCrop;
+import com.bumptech.glide.request.RequestOptions;
+
+import java.io.File;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity {
     public static MainActivity instance;
 
     AppCompatActivity activity;
-    boolean allowcapture = false;
+    private boolean allowcapture = false;
+    Uri latestUri = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -80,6 +98,23 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        FrameLayout gallery = findViewById(R.id.gallery);
+        gallery.setEnabled(false);
+        gallery.setAlpha(0f);
+        gallery.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startActivity(new Intent().setAction("com.android.camera.action.REVIEW").setDataAndType(latestUri,"image/png"));
+            }
+        });
+
+        try (Cursor cursor = getContentResolver().query(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, new String[]{MediaStore.Images.Media._ID}, MediaStore.Images.Media.RELATIVE_PATH + "=? AND " + MediaStore.Images.Media.MIME_TYPE + "=?", new String[]{"DCIM/Camera/", "image/png"}, MediaStore.Images.Media.DATE_ADDED + " DESC")) {
+            if (cursor != null && cursor.moveToFirst()) {
+                long id = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID));
+                latestUri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id);
+            }
+        } catch (Throwable ignored) { }
+
         PreviewView preview = findViewById(R.id.preview);
         preview.setAlpha(0f);
         preview.animate().setDuration(1000).withEndAction(new Runnable() {
@@ -98,6 +133,16 @@ public class MainActivity extends AppCompatActivity {
                         front.setEnabled(true);
                     }
                 }).start();
+                if (latestUri != null) {
+                    ImageView thumbnail = findViewById(R.id.thumbnail);
+                    Glide.with(activity).load(latestUri).apply(RequestOptions.bitmapTransform(new CircleCrop())).into(thumbnail);
+                    gallery.animate().alpha(1f).setDuration(250).withEndAction(new Runnable() {
+                        @Override
+                        public void run() {
+                            gallery.setEnabled(true);
+                        }
+                    }).start();
+                }
             }
         }).start();
 
@@ -113,6 +158,23 @@ public class MainActivity extends AppCompatActivity {
                 CameraService.instance.imageCapture.setTargetRotation((int) event.values[0]);
             }
         }, sensorManager.getDefaultSensor(27), SensorManager.SENSOR_DELAY_NORMAL);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        try (Cursor cursor = getContentResolver().query(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, new String[]{MediaStore.Images.Media._ID}, MediaStore.Images.Media.RELATIVE_PATH + "=? AND " + MediaStore.Images.Media.MIME_TYPE + "=?", new String[]{"DCIM/Camera/", "image/png"}, MediaStore.Images.Media.DATE_ADDED + " DESC")) {
+            if (cursor != null && cursor.moveToFirst()) {
+                long id = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID));
+                latestUri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id);
+                ImageView thumbnail = findViewById(R.id.thumbnail);
+                Glide.with(activity).load(latestUri).apply(RequestOptions.bitmapTransform(new CircleCrop())).into(thumbnail);
+            } else {
+                FrameLayout gallery = findViewById(R.id.gallery);
+                gallery.setEnabled(false);
+                gallery.setAlpha(0f);
+            }
+        } catch (Throwable ignored) { }
     }
 
     @Override
@@ -139,7 +201,6 @@ public class MainActivity extends AppCompatActivity {
         int gcd = gcd(screenConfig[0], screenConfig[1]);
         screenConfig[2] = screenConfig[0] / gcd;
         screenConfig[3] = screenConfig[1] / gcd;
-        Log.e("com.camera", "ScreenResolutions is " + screenConfig[0] + "x" + screenConfig[1] + ", " + screenConfig[2] + ":" + screenConfig[3]);
 
         return screenConfig;
     }

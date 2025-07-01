@@ -22,6 +22,8 @@ import android.provider.MediaStore;
 import android.provider.Settings;
 import android.util.Size;
 import android.view.View;
+import android.widget.FrameLayout;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 
 import androidx.annotation.NonNull;
@@ -38,6 +40,8 @@ import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.LifecycleRegistry;
 
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.resource.bitmap.CircleCrop;
+import com.bumptech.glide.request.RequestOptions;
 import com.google.common.util.concurrent.ListenableFuture;
 
 import java.text.SimpleDateFormat;
@@ -52,7 +56,7 @@ public class CameraService extends Service implements LifecycleOwner {
     public static CameraService instance;
     private LifecycleRegistry lifecycleRegistry;
     ImageCapture imageCapture;
-    CameraSelector cameraLen;
+    private CameraSelector cameraLen;
     int[] selectedResolution = new int[2];
     @Override
     public void onCreate() {
@@ -194,6 +198,18 @@ public class CameraService extends Service implements LifecycleOwner {
             @Override
             public void onImageSaved(@NonNull ImageCapture.OutputFileResults outputFileResults) {
                 MainActivity.instance.activity.findViewById(R.id.capture).setEnabled(true);
+                ImageView thumbnail = MainActivity.instance.activity.findViewById(R.id.thumbnail);
+                Glide.with(MainActivity.instance.activity).load(outputFileResults.getSavedUri()).apply(RequestOptions.bitmapTransform(new CircleCrop())).into(thumbnail);
+                MainActivity.instance.latestUri = outputFileResults.getSavedUri();
+                FrameLayout gallery = MainActivity.instance.activity.findViewById(R.id.gallery);
+                gallery.setScaleX(0.6f);
+                gallery.setScaleY(0.6f);
+                gallery.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(200).withEndAction(new Runnable() {
+                    @Override
+                    public void run() {
+                        gallery.setEnabled(true);
+                    }
+                }).start();
             }
 
             @Override

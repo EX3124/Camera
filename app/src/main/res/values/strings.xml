@@ -5,4 +5,5 @@
 
     <string name="talkback_capture">Capture</string>
     <string name="talkback_front">Switch to front camera</string>
+    <string name="talkback_gallery">Go to gallery</string>
 </resources>
