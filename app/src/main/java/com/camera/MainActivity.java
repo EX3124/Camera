@@ -11,9 +11,7 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.Environment;
 import android.provider.MediaStore;
-import android.util.Log;
 import android.view.Display;
 import android.view.HapticFeedbackConstants;
 import android.view.MotionEvent;
@@ -26,18 +24,13 @@ import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.camera.view.PreviewView;
+import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-import androidx.core.content.FileProvider;
 
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.resource.bitmap.CircleCrop;
 import com.bumptech.glide.request.RequestOptions;
-
-import java.io.File;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity {
     public static MainActivity instance;
@@ -146,6 +139,12 @@ public class MainActivity extends AppCompatActivity {
             }
         }).start();
 
+        FrameLayout direction = findViewById(R.id.direction);
+        ConstraintLayout.LayoutParams directionLayout = (ConstraintLayout.LayoutParams) direction.getLayoutParams();
+        direction.setAlpha(0f);
+        direction.setScaleX(0.6f);
+        direction.setScaleY(0.6f);
+
         SensorManager sensorManager = getSystemService(SensorManager.class);
         sensorManager.registerListener(new SensorEventListener() {
             @Override
@@ -156,6 +155,107 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onSensorChanged(SensorEvent event) {
                 CameraService.instance.imageCapture.setTargetRotation((int) event.values[0]);
+
+                directionLayout.topMargin = 0;
+                directionLayout.leftMargin = 0;
+                directionLayout.rightMargin = 0;
+                directionLayout.bottomMargin = 0;
+                directionLayout.topToTop = ConstraintLayout.LayoutParams.UNSET;
+                directionLayout.startToStart = ConstraintLayout.LayoutParams.UNSET;
+                directionLayout.endToEnd = ConstraintLayout.LayoutParams.UNSET;
+                directionLayout.bottomToBottom = ConstraintLayout.LayoutParams.UNSET;
+                directionLayout.bottomToTop = ConstraintLayout.LayoutParams.UNSET;
+
+                if (event.values[0] == 1f) {
+                    front.animate().rotation(90f).setDuration(200).start();
+                    gallery.animate().rotation(90f).setDuration(200).start();
+                    direction.setRotation(90f);
+                    directionLayout.topToTop = ConstraintLayout.LayoutParams.PARENT_ID;
+                    directionLayout.bottomToTop = R.id.capture;
+                    directionLayout.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID;
+                } else if (event.values[0] == 2f) {
+                    front.animate().rotation(180f).setDuration(200).start();
+                    gallery.animate().rotation(180f).setDuration(200).start();
+                    direction.setRotation(180f);
+                    directionLayout.startToStart = ConstraintLayout.LayoutParams.PARENT_ID;
+                    directionLayout.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID;
+                    directionLayout.bottomToTop = R.id.capture;
+                    directionLayout.bottomMargin = 240;
+                } else if (event.values[0] == 3f) {
+                    front.animate().rotation(270f).setDuration(200).start();
+                    gallery.animate().rotation(270f).setDuration(200).start();
+                    direction.setRotation(270f);
+                    directionLayout.topToTop = ConstraintLayout.LayoutParams.PARENT_ID;
+                    directionLayout.startToStart = ConstraintLayout.LayoutParams.PARENT_ID;
+                    directionLayout.bottomToTop = R.id.capture;
+                } else {
+                    front.animate().rotation(0f).setDuration(200).start();
+                    gallery.animate().rotation(0f).setDuration(200).start();
+                    direction.setRotation(0f);
+                    directionLayout.topToTop = ConstraintLayout.LayoutParams.PARENT_ID;
+                    directionLayout.startToStart = ConstraintLayout.LayoutParams.PARENT_ID;
+                    directionLayout.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID;
+                    directionLayout.topMargin = 240;
+                }
+
+                direction.setAlpha(0f);
+                direction.setScaleX(0.6f);
+                direction.setScaleY(0.6f);
+                direction.animate().cancel();
+                direction.setLayoutParams(directionLayout);
+
+                ImageView arrow = findViewById(R.id.arrow);
+                arrow.setTranslationY(0f);
+                arrow.setRotationY(0f);
+                arrow.animate().cancel();
+
+                if (preview.getAlpha() == 1f)
+                    direction.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(200).withEndAction(new Runnable() {
+                    @Override
+                    public void run() {
+                        arrow.animate().setDuration(200).withEndAction(new Runnable() {
+                            @Override
+                            public void run() {
+                                arrow.animate().yBy(-10f).rotationY(180f).setDuration(500).withEndAction(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        arrow.animate().yBy(20f).setDuration(1000).withEndAction(new Runnable() {
+                                            @Override
+                                            public void run() {
+                                                arrow.animate().yBy(-20f).rotationY(360f).setDuration(1000).withEndAction(new Runnable() {
+                                                    @Override
+                                                    public void run() {
+                                                        arrow.animate().yBy(20f).setDuration(1000).withEndAction(new Runnable() {
+                                                            @Override
+                                                            public void run() {
+                                                                arrow.animate().yBy(-20f).rotationY(540f).setDuration(500).withEndAction(new Runnable() {
+                                                                    @Override
+                                                                    public void run() {
+                                                                        arrow.animate().yBy(10f).setDuration(1000).withEndAction(new Runnable() {
+                                                                            @Override
+                                                                            public void run() {
+                                                                                arrow.animate().setDuration(1000).withEndAction(new Runnable() {
+                                                                                    @Override
+                                                                                    public void run() {
+                                                                                        direction.animate().alpha(0f).scaleX(0.6f).scaleY(0.6f).setDuration(200).start();
+                                                                                    }
+                                                                                }).start();
+                                                                            }
+                                                                        }).start();
+                                                                    }
+                                                                }).start();
+                                                            }
+                                                        }).start();
+                                                    }
+                                                }).start();
+                                            }
+                                        }).start();
+                                    }
+                                }).start();
+                            }
+                        }).start();
+                    }
+                }).start();
             }
         }, sensorManager.getDefaultSensor(27), SensorManager.SENSOR_DELAY_NORMAL);
     }

@@ -23,7 +23,6 @@ import android.provider.Settings;
 import android.util.Size;
 import android.view.View;
 import android.widget.FrameLayout;
-import android.widget.ImageButton;
 import android.widget.ImageView;
 
 import androidx.annotation.NonNull;
@@ -191,7 +190,7 @@ public class CameraService extends Service implements LifecycleOwner {
                 throw new Throwable();
         } catch (Throwable ignored) {
             AudioManager audioManager = getSystemService(AudioManager.class);
-            MediaPlayer.create(this, R.raw.shutter, new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION).build(), audioManager.generateAudioSessionId()).start();
+            MediaPlayer.create(this, R.raw.capture, new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION).build(), audioManager.generateAudioSessionId()).start();
         }
 
         imageCapture.takePicture(outputOptions, ContextCompat.getMainExecutor(this), new ImageCapture.OnImageSavedCallback() {

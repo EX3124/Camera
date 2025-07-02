@@ -1,7 +1,10 @@
 <resources>
     <string name="app_name">Camera</string>
+
     <string name="notifi_title">Camera Service</string>
     <string name="notifi_text">Camera is running in the background</string>
+
+    <string name="direction">Save with this direction up</string>
 
     <string name="talkback_capture">Capture</string>
     <string name="talkback_front">Switch to front camera</string>

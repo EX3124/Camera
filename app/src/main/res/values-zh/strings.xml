@@ -1,8 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">相机</string>
+
     <string name="notifi_title">相机服务</string>
     <string name="notifi_text">相机在后台运行</string>
+
+    <string name="direction">此方向朝上保存</string>
 
     <string name="talkback_capture">拍照</string>
     <string name="talkback_front">切换前置摄像头</string>

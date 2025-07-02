@@ -13,6 +13,33 @@
         android:layout_height="match_parent"
         app:implementationMode="compatible" />
 
+    <FrameLayout
+        android:id="@+id/direction"
+        android:layout_width="wrap_content"
+        android:layout_height="54dp"
+        android:background="@drawable/rounded_rectangle"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center|top"
+            android:text="@string/direction"
+            android:textAlignment="center"
+            android:textColor="@color/white"
+            android:textSize="16sp" />
+
+        <ImageView
+            android:id="@+id/arrow"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|center"
+            android:src="@drawable/direction" />
+    </FrameLayout>
+
     <ImageView
         android:id="@+id/flip"
         android:layout_width="match_parent"

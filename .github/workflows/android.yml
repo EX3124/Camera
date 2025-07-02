@@ -17,8 +17,7 @@ jobs:
         distribution: zulu
 
     - name: 构建
-      run: |
-        chmod +x gradlew
+      run:
         ./gradlew assembleDebug
 
     - name: 上传构建结果
