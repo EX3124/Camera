@@ -36,8 +36,9 @@ public class MainActivity extends AppCompatActivity {
     public static MainActivity instance;
 
     AppCompatActivity activity;
-    private boolean allowcapture = false;
+    private boolean AllowCapture = false;
     Uri latestUri = null;
+    private int SensorRotation;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -60,11 +61,11 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
                 if (event.getAction() == MotionEvent.ACTION_DOWN) {
-                    allowcapture = true;
+                    AllowCapture = true;
                     v.setBackground(getDrawable(R.drawable.capture_press));
                     v.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
-                } else if (event.getAction() == MotionEvent.ACTION_UP && allowcapture) {
-                    allowcapture = false;
+                } else if (event.getAction() == MotionEvent.ACTION_UP && AllowCapture) {
+                    AllowCapture = false;
                     v.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK);
                     v.setBackground(getDrawable(R.drawable.capture));
                 }
@@ -154,7 +155,8 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onSensorChanged(SensorEvent event) {
-                CameraService.instance.imageCapture.setTargetRotation((int) event.values[0]);
+                if (ContextCompat.checkSelfPermission(activity, "android.permission.CAMERA") == PackageManager.PERMISSION_GRANTED)
+                    CameraService.instance.imageCapture.setTargetRotation((int) event.values[0]);
 
                 directionLayout.topMargin = 0;
                 directionLayout.leftMargin = 0;
@@ -173,6 +175,7 @@ public class MainActivity extends AppCompatActivity {
                     directionLayout.topToTop = ConstraintLayout.LayoutParams.PARENT_ID;
                     directionLayout.bottomToTop = R.id.capture;
                     directionLayout.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID;
+                    SensorRotation = 90;
                 } else if (event.values[0] == 2f) {
                     front.animate().rotation(180f).setDuration(200).start();
                     gallery.animate().rotation(180f).setDuration(200).start();
@@ -181,6 +184,7 @@ public class MainActivity extends AppCompatActivity {
                     directionLayout.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID;
                     directionLayout.bottomToTop = R.id.capture;
                     directionLayout.bottomMargin = 240;
+                    SensorRotation = 180;
                 } else if (event.values[0] == 3f) {
                     front.animate().rotation(270f).setDuration(200).start();
                     gallery.animate().rotation(270f).setDuration(200).start();
@@ -188,14 +192,21 @@ public class MainActivity extends AppCompatActivity {
                     directionLayout.topToTop = ConstraintLayout.LayoutParams.PARENT_ID;
                     directionLayout.startToStart = ConstraintLayout.LayoutParams.PARENT_ID;
                     directionLayout.bottomToTop = R.id.capture;
+                    SensorRotation = 270;
                 } else {
-                    front.animate().rotation(0f).setDuration(200).start();
-                    gallery.animate().rotation(0f).setDuration(200).start();
+                    if (SensorRotation == 270) {
+                        front.animate().rotation(360f).setDuration(200).start();
+                        gallery.animate().rotation(360f).setDuration(200).start();
+                    } else {
+                        front.animate().rotation(0f).setDuration(200).start();
+                        gallery.animate().rotation(0f).setDuration(200).start();
+                    }
                     direction.setRotation(0f);
                     directionLayout.topToTop = ConstraintLayout.LayoutParams.PARENT_ID;
                     directionLayout.startToStart = ConstraintLayout.LayoutParams.PARENT_ID;
                     directionLayout.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID;
                     directionLayout.topMargin = 240;
+                    SensorRotation = 0;
                 }
 
                 direction.setAlpha(0f);
