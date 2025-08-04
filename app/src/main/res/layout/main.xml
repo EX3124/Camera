@@ -8,10 +8,64 @@
     tools:context=".MainActivity">
 
     <androidx.camera.view.PreviewView
-        android:id="@+id/preview"
+        android:id="@+id/viewfinder"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:contentDescription="@string/talkback_viewfinder"
         app:implementationMode="compatible" />
+
+    <ImageView
+        android:id="@+id/flip"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone" />
+
+    <ImageButton
+        android:id="@+id/front"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="128dp"
+        android:background="@drawable/selector_circle"
+        android:contentDescription="@string/talkback_front"
+        android:src="@drawable/front"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/capture"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <ImageButton
+        android:id="@+id/capture"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="118dp"
+        android:background="@drawable/capture"
+        android:contentDescription="@string/talkback_capture"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <FrameLayout
+        android:id="@+id/gallery"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_marginBottom="128dp"
+        android:background="@drawable/selector_circle"
+        android:contentDescription="@string/talkback_gallery"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/capture">
+
+        <ImageView
+            android:layout_width="45dp"
+            android:layout_height="45dp"
+            android:layout_gravity="center"
+            android:src="@drawable/pressed_circle" />
+
+        <ImageView
+            android:id="@+id/thumbnail"
+            android:layout_width="43dp"
+            android:layout_height="43dp"
+            android:layout_gravity="center" />
+    </FrameLayout>
 
     <FrameLayout
         android:id="@+id/direction"
@@ -30,7 +84,8 @@
             android:text="@string/direction"
             android:textAlignment="center"
             android:textColor="@color/white"
-            android:textSize="16sp" />
+            android:textSize="16sp"
+            android:importantForAccessibility="no" />
 
         <ImageView
             android:id="@+id/arrow"
@@ -41,56 +96,32 @@
     </FrameLayout>
 
     <ImageView
-        android:id="@+id/flip"
+        android:id="@+id/preview"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:contentDescription="@string/talkback_preview"
         android:visibility="gone" />
 
     <ImageButton
-        android:id="@+id/capture"
+        android:id="@+id/retake"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="118dp"
-        android:background="@drawable/capture"
-        android:contentDescription="@string/talkback_capture"
+        android:layout_marginStart="56dp"
+        android:layout_marginBottom="104dp"
+        android:background="@drawable/retake"
+        android:contentDescription="@string/talkback_retake"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
 
     <ImageButton
-        android:id="@+id/front"
+        android:id="@+id/confirm"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="128dp"
-        android:src="@drawable/front"
-        android:background="@drawable/selector_circle"
-        android:contentDescription="@string/talkback_front"
+        android:layout_marginEnd="56dp"
+        android:layout_marginBottom="104dp"
+        android:background="@drawable/confirm"
+        android:contentDescription="@string/talkback_confirm"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toStartOf="@+id/capture"
-        app:layout_constraintStart_toStartOf="parent" />
-
-    <FrameLayout
-        android:id="@+id/gallery"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:layout_marginBottom="128dp"
-        android:background="@drawable/selector_circle"
-        android:contentDescription="@string/talkback_gallery"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toEndOf="@+id/capture"
-        app:layout_constraintEnd_toEndOf="parent">
-
-        <ImageView
-            android:layout_width="45dp"
-            android:layout_height="45dp"
-            android:layout_gravity="center"
-            android:src="@drawable/pressed_circle" />
-
-        <ImageView
-            android:id="@+id/thumbnail"
-            android:layout_width="43dp"
-            android:layout_height="43dp"
-            android:layout_gravity="center" />
-    </FrameLayout>
+        app:layout_constraintEnd_toEndOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

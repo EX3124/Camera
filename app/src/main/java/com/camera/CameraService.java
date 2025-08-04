@@ -50,30 +50,34 @@ import java.util.Locale;
 
 import jp.wasabeef.glide.transformations.BlurTransformation;
 
-
 public class CameraService extends Service implements LifecycleOwner {
     public static CameraService instance;
-    private LifecycleRegistry lifecycleRegistry;
-    ImageCapture imageCapture;
-    private CameraSelector cameraLen;
-    int[] selectedResolution = new int[2];
+
+    private LifecycleRegistry LifecycleRegistry;
+    private ImageCapture ImageCapture;
+    private CameraSelector CameraLen;
+    private int[] SelectedResolution = new int[2];
+
     @Override
     public void onCreate() {
         super.onCreate();
         instance = this;
-        lifecycleRegistry = new LifecycleRegistry(this);
-        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE);
+        LifecycleRegistry = new LifecycleRegistry(this);
+        LifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE);
 
         NotificationChannel serviceChannel = new NotificationChannel("0", getString(R.string.notifi_title), NotificationManager.IMPORTANCE_DEFAULT);
         NotificationManager manager = getSystemService(NotificationManager.class);
         manager.createNotificationChannel(serviceChannel);
     }
-
+    @NonNull
+    @Override
+    public Lifecycle getLifecycle() {
+        return LifecycleRegistry;
+    }
     @Override
     public IBinder onBind(Intent intent) {
         return null;
     }
-
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Notification notification = new NotificationCompat.Builder(this, "0")
@@ -83,66 +87,32 @@ public class CameraService extends Service implements LifecycleOwner {
                 .build();
         startForeground(1, notification);
 
-        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_START);
-        cameraLen = CameraSelector.DEFAULT_BACK_CAMERA;
+        LifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_START);
+        CameraLen = CameraSelector.DEFAULT_BACK_CAMERA;
         startCamera();
 
         return START_STICKY;
     }
-
-    private void startCamera() {
-        String[] resolution = getBestResolutions(MainActivity.instance.getScreenResolutions(), getCameraResolutions((cameraLen == CameraSelector.DEFAULT_BACK_CAMERA) ? "0" : "1")).split("x");
-        selectedResolution[0] = Integer.parseInt(resolution[1]);
-        selectedResolution[1] = Integer.parseInt(resolution[0]);
-        ListenableFuture<ProcessCameraProvider> cameraProviderFuture = ProcessCameraProvider.getInstance(this);
-        cameraProviderFuture.addListener(() -> {
-            try {
-                ProcessCameraProvider cameraProvider = cameraProviderFuture.get();
-                Preview preview = new Preview.Builder()
-                        .setTargetResolution(new Size(selectedResolution[0], selectedResolution[1]))
-                        .build();
-
-                imageCapture = new ImageCapture.Builder()
-                        .setTargetResolution(new Size(selectedResolution[0], selectedResolution[1]))
-                        .build();
-                PreviewView view = MainActivity.instance.activity.findViewById(R.id.preview);
-                preview.setSurfaceProvider(view.getSurfaceProvider());
-
-                cameraProvider.unbindAll();
-                cameraProvider.bindToLifecycle(this, cameraLen, preview, imageCapture);
-            } catch (Exception ignore) {
-                stopSelf();
-            }
-        }, ContextCompat.getMainExecutor(this));
-    }
-
-    @NonNull
-    @Override
-    public Lifecycle getLifecycle() {
-        return lifecycleRegistry;
-    }
-
     @Override
     public void onDestroy() {
         super.onDestroy();
-        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY);
+        LifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY);
     }
 
     public void switchLens() {
-        cameraLen = (cameraLen == CameraSelector.DEFAULT_BACK_CAMERA) ? CameraSelector.DEFAULT_FRONT_CAMERA : CameraSelector.DEFAULT_BACK_CAMERA;
+        CameraLen = (CameraLen == CameraSelector.DEFAULT_BACK_CAMERA) ? CameraSelector.DEFAULT_FRONT_CAMERA : CameraSelector.DEFAULT_BACK_CAMERA;
         startCamera();
 
-        PreviewView preview = MainActivity.instance.activity.findViewById(R.id.preview);
-        Bitmap bitmap = preview.getBitmap();
+        PreviewView viewfinder = MainActivity.instance.activity.findViewById(R.id.viewfinder);
+        Bitmap bitmap = viewfinder.getBitmap();
         ImageView flip = MainActivity.instance.activity.findViewById(R.id.flip);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             flip.setImageBitmap(bitmap);
             flip.setRenderEffect(RenderEffect.createBlurEffect(80f, 80f, Shader.TileMode.CLAMP));
-        }else
+        } else
             Glide.with(this).load(bitmap).transform(new BlurTransformation(16, 8)).into(flip);
         flip.setVisibility(View.VISIBLE);
-        flip.setAlpha(1f);
-        preview.setAlpha(0f);
+        viewfinder.setAlpha(0f);
         flip.animate().rotationX(-90f).scaleX(0.5f).scaleY(0.5f).setDuration(160).withEndAction(new Runnable() {
             @Override
             public void run() {
@@ -155,7 +125,7 @@ public class CameraService extends Service implements LifecycleOwner {
                             public void run() {
                                 flip.setRotationX(0f);
                                 flip.setVisibility(View.GONE);
-                                preview.setAlpha(1f);
+                                viewfinder.setAlpha(1f);
                                 MainActivity.instance.activity.findViewById(R.id.front).setEnabled(true);
                             }
                         }).start();
@@ -165,7 +135,7 @@ public class CameraService extends Service implements LifecycleOwner {
         }).start();
     }
     public void capture() {
-        if (imageCapture == null) return;
+        if (ImageCapture == null) return;
 
         ContentValues contentValues = new ContentValues();
         contentValues.put(MediaStore.MediaColumns.DISPLAY_NAME, new SimpleDateFormat("yyyy-MM-dd HH-mm-ss SSS", Locale.getDefault()).format(System.currentTimeMillis()));
@@ -178,10 +148,10 @@ public class CameraService extends Service implements LifecycleOwner {
                 contentValues
         ).build();
 
-        MainActivity.instance.activity.findViewById(R.id.preview).animate().alpha(0f).setDuration(100).withEndAction(new Runnable() {
+        MainActivity.instance.activity.findViewById(R.id.viewfinder).animate().alpha(0f).setDuration(100).withEndAction(new Runnable() {
             @Override
             public void run() {
-                MainActivity.instance.activity.findViewById(R.id.preview).animate().alpha(1f).setDuration(100).start();
+                MainActivity.instance.activity.findViewById(R.id.viewfinder).animate().alpha(1f).setDuration(100).start();
             }
         }).start();
 
@@ -193,24 +163,37 @@ public class CameraService extends Service implements LifecycleOwner {
             MediaPlayer.create(this, R.raw.capture, new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION).build(), audioManager.generateAudioSessionId()).start();
         }
 
-        imageCapture.takePicture(outputOptions, ContextCompat.getMainExecutor(this), new ImageCapture.OnImageSavedCallback() {
+        ImageCapture.setTargetRotation(MainActivity.instance.SensorRotation);
+        ImageCapture.takePicture(outputOptions, ContextCompat.getMainExecutor(this), new ImageCapture.OnImageSavedCallback() {
             @Override
             public void onImageSaved(@NonNull ImageCapture.OutputFileResults outputFileResults) {
+                MainActivity.instance.LatestUri = outputFileResults.getSavedUri();
                 MainActivity.instance.activity.findViewById(R.id.capture).setEnabled(true);
-                ImageView thumbnail = MainActivity.instance.activity.findViewById(R.id.thumbnail);
-                Glide.with(MainActivity.instance.activity).load(outputFileResults.getSavedUri()).apply(RequestOptions.bitmapTransform(new CircleCrop())).into(thumbnail);
-                MainActivity.instance.latestUri = outputFileResults.getSavedUri();
-                FrameLayout gallery = MainActivity.instance.activity.findViewById(R.id.gallery);
-                gallery.setScaleX(0.6f);
-                gallery.setScaleY(0.6f);
-                gallery.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(200).withEndAction(new Runnable() {
-                    @Override
-                    public void run() {
-                        gallery.setEnabled(true);
-                    }
-                }).start();
+                MainActivity.instance.activity.findViewById(R.id.front).setEnabled(true);
+                if (MainActivity.instance.action.equals("android.media.action.IMAGE_CAPTURE")) {
+                    MainActivity.instance.activity.findViewById(R.id.direction).setVisibility(View.GONE);
+                    MainActivity.instance.activity.findViewById(R.id.capture).setVisibility(View.GONE);
+                    MainActivity.instance.activity.findViewById(R.id.front).setVisibility(View.GONE);
+                    MainActivity.instance.activity.findViewById(R.id.viewfinder).setVisibility(View.GONE);
+                    ImageView frame = MainActivity.instance.activity.findViewById(R.id.preview);
+                    frame.setVisibility(View.VISIBLE);
+                    Glide.with(MainActivity.instance.activity).load(outputFileResults.getSavedUri()).into(frame);
+                    MainActivity.instance.activity.findViewById(R.id.confirm).setVisibility(View.VISIBLE);
+                    MainActivity.instance.activity.findViewById(R.id.retake).setVisibility(View.VISIBLE);
+                } else {
+                    ImageView thumbnail = MainActivity.instance.activity.findViewById(R.id.thumbnail);
+                    Glide.with(MainActivity.instance.activity).load(outputFileResults.getSavedUri()).apply(RequestOptions.bitmapTransform(new CircleCrop())).into(thumbnail);
+                    FrameLayout gallery = MainActivity.instance.activity.findViewById(R.id.gallery);
+                    gallery.setScaleX(0.6f);
+                    gallery.setScaleY(0.6f);
+                    gallery.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(200).withEndAction(new Runnable() {
+                        @Override
+                        public void run() {
+                            gallery.setEnabled(true);
+                        }
+                    }).start();
+                }
             }
-
             @Override
             public void onError(@NonNull ImageCaptureException exception) {
 
@@ -218,6 +201,31 @@ public class CameraService extends Service implements LifecycleOwner {
         });
     }
 
+    private void startCamera() {
+        String[] resolution = getBestResolutions(MainActivity.instance.getScreenResolutions(), getCameraResolutions((CameraLen == CameraSelector.DEFAULT_BACK_CAMERA) ? "0" : "1")).split("x");
+        SelectedResolution[0] = Integer.parseInt(resolution[1]);
+        SelectedResolution[1] = Integer.parseInt(resolution[0]);
+        ListenableFuture<ProcessCameraProvider> cameraProviderFuture = ProcessCameraProvider.getInstance(this);
+        cameraProviderFuture.addListener(() -> {
+            try {
+                ProcessCameraProvider cameraProvider = cameraProviderFuture.get();
+                Preview preview = new Preview.Builder()
+                        .setTargetResolution(new Size(SelectedResolution[0], SelectedResolution[1]))
+                        .build();
+
+                ImageCapture = new ImageCapture.Builder()
+                        .setTargetResolution(new Size(SelectedResolution[0], SelectedResolution[1]))
+                        .build();
+                PreviewView viewfinder = MainActivity.instance.activity.findViewById(R.id.viewfinder);
+                preview.setSurfaceProvider(viewfinder.getSurfaceProvider());
+
+                cameraProvider.unbindAll();
+                cameraProvider.bindToLifecycle(this, CameraLen, preview, ImageCapture);
+            } catch (Exception ignore) {
+                stopSelf();
+            }
+        }, ContextCompat.getMainExecutor(this));
+    }
     private List<String> getCameraResolutions(String cameraId) {
         List<String> resolutions = new ArrayList<>();
         CameraManager cameraManager = getSystemService(CameraManager.class);

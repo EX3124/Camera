@@ -36,9 +36,11 @@ public class MainActivity extends AppCompatActivity {
     public static MainActivity instance;
 
     AppCompatActivity activity;
-    private boolean AllowCapture = false;
-    Uri latestUri = null;
-    private int SensorRotation;
+    Uri LatestUri;
+    int SensorRotation;
+    String action;
+    
+    private boolean AllowCapture;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -48,11 +50,24 @@ public class MainActivity extends AppCompatActivity {
 
         instance = this;
         activity = this;
+        action = getIntent().getAction();
 
         ActivityCompat.requestPermissions(this, new String[]{"android.permission.CAMERA"}, 0);
 
         if (ContextCompat.checkSelfPermission(this, "android.permission.CAMERA") == PackageManager.PERMISSION_GRANTED)
             startService(new Intent(this, CameraService.class));
+
+        ImageButton front = findViewById(R.id.front);
+        front.setEnabled(false);
+        front.setAlpha(0f);
+        front.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                v.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK);
+                front.setEnabled(false);
+                CameraService.instance.switchLens();
+            }
+        });
 
         ImageButton capture = findViewById(R.id.capture);
         capture.setEnabled(false);
@@ -76,19 +91,9 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 v.setEnabled(false);
-                CameraService.instance.capture();
-            }
-        });
-
-        ImageButton front = findViewById(R.id.front);
-        front.setEnabled(false);
-        front.setAlpha(0f);
-        front.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                v.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK);
                 front.setEnabled(false);
-                CameraService.instance.switchLens();
+                CameraService.instance.capture();
+                v.announceForAccessibility(getString(R.string.talkback_captured));
             }
         });
 
@@ -98,23 +103,23 @@ public class MainActivity extends AppCompatActivity {
         gallery.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                startActivity(new Intent().setAction("com.android.camera.action.REVIEW").setDataAndType(latestUri,"image/png"));
+                startActivity(new Intent().setAction("com.android.camera.action.REVIEW").setDataAndType(LatestUri,"image/png"));
             }
         });
 
         try (Cursor cursor = getContentResolver().query(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, new String[]{MediaStore.Images.Media._ID}, MediaStore.Images.Media.RELATIVE_PATH + "=? AND " + MediaStore.Images.Media.MIME_TYPE + "=?", new String[]{"DCIM/Camera/", "image/png"}, MediaStore.Images.Media.DATE_ADDED + " DESC")) {
             if (cursor != null && cursor.moveToFirst()) {
                 long id = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID));
-                latestUri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id);
+                LatestUri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id);
             }
         } catch (Throwable ignored) { }
 
-        PreviewView preview = findViewById(R.id.preview);
-        preview.setAlpha(0f);
-        preview.animate().setDuration(1000).withEndAction(new Runnable() {
+        PreviewView viewfinder = findViewById(R.id.viewfinder);
+        viewfinder.setAlpha(0f);
+        viewfinder.animate().setDuration(1000).withEndAction(new Runnable() {
             @Override
             public void run() {
-                preview.animate().alpha(1f).setDuration(250).start();
+                viewfinder.animate().alpha(1f).setDuration(250).start();
                 capture.animate().alpha(1f).setDuration(250).withEndAction(new Runnable() {
                     @Override
                     public void run() {
@@ -127,9 +132,9 @@ public class MainActivity extends AppCompatActivity {
                         front.setEnabled(true);
                     }
                 }).start();
-                if (latestUri != null) {
+                if (LatestUri != null) {
                     ImageView thumbnail = findViewById(R.id.thumbnail);
-                    Glide.with(activity).load(latestUri).apply(RequestOptions.bitmapTransform(new CircleCrop())).into(thumbnail);
+                    Glide.with(activity).load(LatestUri).apply(RequestOptions.bitmapTransform(new CircleCrop())).into(thumbnail);
                     gallery.animate().alpha(1f).setDuration(250).withEndAction(new Runnable() {
                         @Override
                         public void run() {
@@ -141,71 +146,130 @@ public class MainActivity extends AppCompatActivity {
         }).start();
 
         FrameLayout direction = findViewById(R.id.direction);
-        ConstraintLayout.LayoutParams directionLayout = (ConstraintLayout.LayoutParams) direction.getLayoutParams();
+        ConstraintLayout.LayoutParams DirectionLayout = (ConstraintLayout.LayoutParams) direction.getLayoutParams();
         direction.setAlpha(0f);
         direction.setScaleX(0.6f);
         direction.setScaleY(0.6f);
 
+        ImageButton confirm = findViewById(R.id.confirm);
+        confirm.setVisibility(View.GONE);
+        confirm.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                v.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK);
+                setResult(RESULT_OK, new Intent().setData(LatestUri));
+                stopService(new Intent(activity, CameraService.class));
+                finish();
+            }
+        });
+
+        ImageButton retake = findViewById(R.id.retake);
+        retake.setVisibility(View.GONE);
+        retake.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                v.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK);
+                direction.setVisibility(View.VISIBLE);
+                capture.setVisibility(View.VISIBLE);
+                front.setVisibility(View.VISIBLE);
+                viewfinder.setVisibility(View.VISIBLE);
+                findViewById(R.id.preview).setVisibility(View.GONE);
+                confirm.setVisibility(View.GONE);
+                v.setVisibility(View.GONE);
+            }
+        });
+
         SensorManager sensorManager = getSystemService(SensorManager.class);
         sensorManager.registerListener(new SensorEventListener() {
             @Override
-            public void onAccuracyChanged(Sensor sensor, int accuracy) {
-
-            }
-
+            public void onAccuracyChanged(Sensor sensor, int accuracy) { }
             @Override
             public void onSensorChanged(SensorEvent event) {
-                if (ContextCompat.checkSelfPermission(activity, "android.permission.CAMERA") == PackageManager.PERMISSION_GRANTED)
-                    CameraService.instance.imageCapture.setTargetRotation((int) event.values[0]);
 
-                directionLayout.topMargin = 0;
-                directionLayout.leftMargin = 0;
-                directionLayout.rightMargin = 0;
-                directionLayout.bottomMargin = 0;
-                directionLayout.topToTop = ConstraintLayout.LayoutParams.UNSET;
-                directionLayout.startToStart = ConstraintLayout.LayoutParams.UNSET;
-                directionLayout.endToEnd = ConstraintLayout.LayoutParams.UNSET;
-                directionLayout.bottomToBottom = ConstraintLayout.LayoutParams.UNSET;
-                directionLayout.bottomToTop = ConstraintLayout.LayoutParams.UNSET;
+                DirectionLayout.topMargin = 0;
+                DirectionLayout.leftMargin = 0;
+                DirectionLayout.rightMargin = 0;
+                DirectionLayout.bottomMargin = 0;
+                DirectionLayout.topToTop = ConstraintLayout.LayoutParams.UNSET;
+                DirectionLayout.startToStart = ConstraintLayout.LayoutParams.UNSET;
+                DirectionLayout.endToEnd = ConstraintLayout.LayoutParams.UNSET;
+                DirectionLayout.bottomToBottom = ConstraintLayout.LayoutParams.UNSET;
+                DirectionLayout.bottomToTop = ConstraintLayout.LayoutParams.UNSET;
 
                 if (event.values[0] == 1f) {
                     front.animate().rotation(90f).setDuration(200).start();
                     gallery.animate().rotation(90f).setDuration(200).start();
+                    confirm.animate().rotation(90f).setDuration(200).start();
+                    retake.animate().rotation(90f).setDuration(200).start();
                     direction.setRotation(90f);
-                    directionLayout.topToTop = ConstraintLayout.LayoutParams.PARENT_ID;
-                    directionLayout.bottomToTop = R.id.capture;
-                    directionLayout.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID;
-                    SensorRotation = 90;
+                    DirectionLayout.topToTop = ConstraintLayout.LayoutParams.PARENT_ID;
+                    DirectionLayout.bottomToTop = R.id.capture;
+                    DirectionLayout.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID;
+                    SensorRotation = 1;
                 } else if (event.values[0] == 2f) {
                     front.animate().rotation(180f).setDuration(200).start();
                     gallery.animate().rotation(180f).setDuration(200).start();
+                    confirm.animate().rotation(180f).setDuration(200).start();
+                    retake.animate().rotation(180f).setDuration(200).start();
                     direction.setRotation(180f);
-                    directionLayout.startToStart = ConstraintLayout.LayoutParams.PARENT_ID;
-                    directionLayout.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID;
-                    directionLayout.bottomToTop = R.id.capture;
-                    directionLayout.bottomMargin = 240;
-                    SensorRotation = 180;
+                    DirectionLayout.startToStart = ConstraintLayout.LayoutParams.PARENT_ID;
+                    DirectionLayout.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID;
+                    DirectionLayout.bottomToTop = R.id.capture;
+                    DirectionLayout.bottomMargin = 240;
+                    SensorRotation = 2;
                 } else if (event.values[0] == 3f) {
+                    if (SensorRotation == 0) {
+                        front.setRotation(360f);
+                        gallery.setRotation(360f);
+                        confirm.setRotation(360f);
+                        retake.setRotation(360f);
+                    }
                     front.animate().rotation(270f).setDuration(200).start();
                     gallery.animate().rotation(270f).setDuration(200).start();
+                    confirm.animate().rotation(270f).setDuration(200).start();
+                    retake.animate().rotation(270f).setDuration(200).start();
                     direction.setRotation(270f);
-                    directionLayout.topToTop = ConstraintLayout.LayoutParams.PARENT_ID;
-                    directionLayout.startToStart = ConstraintLayout.LayoutParams.PARENT_ID;
-                    directionLayout.bottomToTop = R.id.capture;
-                    SensorRotation = 270;
+                    DirectionLayout.topToTop = ConstraintLayout.LayoutParams.PARENT_ID;
+                    DirectionLayout.startToStart = ConstraintLayout.LayoutParams.PARENT_ID;
+                    DirectionLayout.bottomToTop = R.id.capture;
+                    SensorRotation = 3;
                 } else {
-                    if (SensorRotation == 270) {
-                        front.animate().rotation(360f).setDuration(200).start();
-                        gallery.animate().rotation(360f).setDuration(200).start();
+                    if (SensorRotation == 3) {
+                        front.animate().rotation(360f).setDuration(200).withEndAction(new Runnable() {
+                            @Override
+                            public void run() {
+                                front.setRotation(0f);
+                            }
+                        }).start();
+                        gallery.animate().rotation(360f).setDuration(200).withEndAction(new Runnable() {
+                            @Override
+                            public void run() {
+                                gallery.setRotation(0f);
+                            }
+                        }).start();
+                        confirm.animate().rotation(360f).setDuration(200).withEndAction(new Runnable() {
+                            @Override
+                            public void run() {
+                                confirm.setRotation(0f);
+                            }
+                        }).start();
+                        retake.animate().rotation(360f).setDuration(200).withEndAction(new Runnable() {
+                            @Override
+                            public void run() {
+                                retake.setRotation(0f);
+                            }
+                        }).start();
                     } else {
                         front.animate().rotation(0f).setDuration(200).start();
                         gallery.animate().rotation(0f).setDuration(200).start();
+                        confirm.animate().rotation(0f).setDuration(200).start();
+                        retake.animate().rotation(0f).setDuration(200).start();
                     }
                     direction.setRotation(0f);
-                    directionLayout.topToTop = ConstraintLayout.LayoutParams.PARENT_ID;
-                    directionLayout.startToStart = ConstraintLayout.LayoutParams.PARENT_ID;
-                    directionLayout.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID;
-                    directionLayout.topMargin = 240;
+                    DirectionLayout.topToTop = ConstraintLayout.LayoutParams.PARENT_ID;
+                    DirectionLayout.startToStart = ConstraintLayout.LayoutParams.PARENT_ID;
+                    DirectionLayout.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID;
+                    DirectionLayout.topMargin = 240;
                     SensorRotation = 0;
                 }
 
@@ -213,14 +277,14 @@ public class MainActivity extends AppCompatActivity {
                 direction.setScaleX(0.6f);
                 direction.setScaleY(0.6f);
                 direction.animate().cancel();
-                direction.setLayoutParams(directionLayout);
+                direction.setLayoutParams(DirectionLayout);
 
                 ImageView arrow = findViewById(R.id.arrow);
                 arrow.setTranslationY(0f);
                 arrow.setRotationY(0f);
                 arrow.animate().cancel();
 
-                if (preview.getAlpha() == 1f)
+                if (viewfinder.getAlpha() == 1f)
                     direction.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(200).withEndAction(new Runnable() {
                     @Override
                     public void run() {
@@ -270,24 +334,26 @@ public class MainActivity extends AppCompatActivity {
             }
         }, sensorManager.getDefaultSensor(27), SensorManager.SENSOR_DELAY_NORMAL);
     }
-
     @Override
     protected void onResume() {
         super.onResume();
         try (Cursor cursor = getContentResolver().query(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, new String[]{MediaStore.Images.Media._ID}, MediaStore.Images.Media.RELATIVE_PATH + "=? AND " + MediaStore.Images.Media.MIME_TYPE + "=?", new String[]{"DCIM/Camera/", "image/png"}, MediaStore.Images.Media.DATE_ADDED + " DESC")) {
             if (cursor != null && cursor.moveToFirst()) {
                 long id = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID));
-                latestUri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id);
+                LatestUri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id);
                 ImageView thumbnail = findViewById(R.id.thumbnail);
-                Glide.with(activity).load(latestUri).apply(RequestOptions.bitmapTransform(new CircleCrop())).into(thumbnail);
+                Glide.with(activity).load(LatestUri).apply(RequestOptions.bitmapTransform(new CircleCrop())).into(thumbnail);
             } else {
                 FrameLayout gallery = findViewById(R.id.gallery);
                 gallery.setEnabled(false);
                 gallery.setAlpha(0f);
             }
         } catch (Throwable ignored) { }
+        if (!action.equals("android.intent.action.MAIN")) {
+            LatestUri = null;
+            findViewById(R.id.gallery).setVisibility(View.GONE);
+        }
     }
-
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);

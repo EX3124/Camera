@@ -6,7 +6,12 @@
 
     <string name="direction">Save with this direction up</string>
 
-    <string name="talkback_capture">Capture</string>
+    <string name="talkback_viewfinder">Viewfinder</string>
+    <string name="talkback_preview">Preview the captured photo</string>
+    <string name="talkback_capture">Take photo</string>
+    <string name="talkback_captured">Took a photo</string>
     <string name="talkback_front">Switch to front camera</string>
     <string name="talkback_gallery">Go to gallery</string>
+    <string name="talkback_retake">Retake the photo</string>
+    <string name="talkback_confirm">Confirm selection of this photo</string>
 </resources>
